@@ -8,7 +8,7 @@ install_ruta <- function() {
 
 .onLoad <- function(libname, pkgname) {
   message("
-Welcome to the complimentary experiments for the paper 'A Showcase
+Welcome to the supplementary experiments for the paper 'A Showcase
 of the Use of Autoencoders in Feature Learning Applications'
 ------------------------------------------------------------------
 
