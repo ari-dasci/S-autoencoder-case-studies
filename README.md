@@ -1,21 +1,21 @@
 autoencoder-showcase
 ====================
 
-**Welcome to the complimentary experiments for the paper 'A Showcase
+**Welcome to the supplementary experiments for the paper 'A Showcase
 of the Use of Autoencoders in Feature Learning Applications'**
 
 Inside this package, you will find 4 main functions:
-  - anomaly_detection()  
+  - `anomaly_detection()`  
     Creates a synthetic multi-valued time series with an anomalous
     region and performs anomaly detection.
-  - visualization()  
+  - `visualization()`  
     Downloads the Statlog dataset and compacts it to 2 and 3
     dimensions for visualization.
-  - hashing()  
+  - `hashing()`  
     Loads IMDB dataset from Keras, trains an autoencoder and
     hashes the test subset, measuring the correspondance between
     distance among instances and Hamming distance among their
     hashes.
-  - denoising()  
+  - `denoising()`  
     Loads CIFAR10 dataset and trains a denoising autoencoder,
     performs denoising over the test subset.
