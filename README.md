@@ -4,6 +4,12 @@ autoencoder-showcase
 **Welcome to the supplementary experiments for the paper 'A Showcase
 of the Use of Autoencoders in Feature Learning Applications'**
 
+Install this package using:
+
+```r
+devtools::install_github("ari-dasci/autoencoder-showcase")
+```
+
 Inside this package, you will find 4 main functions:
   - `anomaly_detection()`  
     Creates a synthetic multi-valued time series with an anomalous
