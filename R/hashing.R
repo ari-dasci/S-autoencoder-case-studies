@@ -7,25 +7,35 @@
 
 #' @import purrr
 #' @import ruta
+#' @importFrom mldr.datasets bibtex
 hashing <- function() {
   set.seed(12345)
   n <- 1000
 
-  dataset <- keras::dataset_imdb(num_words = n)
+  # dataset <- keras::dataset_imdb(num_words = n)
+  dataset <- bibtex()
+  dataset <- dataset$dataset[, dataset$attributesIndexes]
+  dataset <- apply(dataset, 2, as.numeric)
+
+  in_test <- sample(1:nrow(dataset), floor(nrow(dataset)/5)) # 80-20 split
+
+  x_train <- as.matrix(dataset[-in_test, ])
+  x_test <- as.matrix(dataset[in_test, ])
+
   # x_train <- matrix(0, nrow = length(dataset$train$x), ncol = n)
-  x_train <- t(sapply(dataset$train$x, function(instance) {
-    as.numeric(1:n %in% instance)
-  }))
-  x_test <- t(sapply(dataset$test$x, function(instance) {
-    as.numeric(1:n %in% instance)
-  }))
+  # x_train <- t(sapply(dataset$train$x, function(instance) {
+  #   as.numeric(1:n %in% instance)
+  # }))
+  # x_test <- t(sapply(dataset$test$x, function(instance) {
+  #   as.numeric(1:n %in% instance)
+  # }))
 
   network <-
     input() +
-    dense(256) +
+    dense(512) +
     layer_keras("gaussian_noise", stddev = 16) +
-    dense(10, activation = "sigmoid") +
-    dense(256) +
+    dense(16, activation = "sigmoid") +
+    dense(512) +
     output("sigmoid")
 
   hash <- function(model, x, threshold = 0.5) {
@@ -68,7 +78,8 @@ hashing <- function() {
 
   intra <- sapply(clusters, intracluster) %>% summary()
 
-  inter_near <- data.frame(sum = rep(0, 10), sumsq = rep(0, 10), count = rep(0, 10))
+  code_n <- 16
+  inter_near <- data.frame(sum = rep(0, code_n), sumsq = rep(0, code_n), count = rep(0, code_n))
 
   for (a in 1:(length(clusters) - 1)) {
     for (b in (a + 1):length(clusters)) {
@@ -88,10 +99,9 @@ hashing <- function() {
   barplot(
     inter_near$mean,
     col = "#555555",
-    names.arg = 0:10,
+    names.arg = 0:code_n,
     xlab = "Hamming distance between hashes",
     ylab = "Mean intercluster cosine distance",
-    ylim = c(0.04, 0.09),
     xpd = FALSE
   )
   dev.off()

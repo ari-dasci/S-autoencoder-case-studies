@@ -10,5 +10,5 @@ License: What license is it under?
 Encoding: UTF-8
 LazyData: true
 Imports:
-    ruta, purrr, keras, stringdist, nonlinearTseries
+    ruta, purrr, keras, stringdist, nonlinearTseries, mldr.datasets
 RoxygenNote: 6.1.1
