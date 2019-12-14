@@ -3,3 +3,14 @@
 .RData
 .Ruserdata
 data/*
+
+denoising/noisy/*
+denoising/predictions/*
+*.png
+*.jpg
+*.sync-conflict*
+*.csv
+*.eps
+*.pdf
+*.tar.gz
+.vscode

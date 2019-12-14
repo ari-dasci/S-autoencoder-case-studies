@@ -71,36 +71,97 @@ load_artificial <- function() {
 
 #' @import purrr
 #' @import ruta
+#' @import keras
 anomaly_detection <- function() {
   set.seed(12345)
-
+  allow_growth()
   dat <- load_unsw()
 
-  network1 <-
-    input() +
-    dense(10, activation = "relu") +
-    output("sigmoid")
+  autoencoder <- keras_model_sequential(list(
+    # layer_gaussian_noise(input_shape = 187L, stddev = .1),
+    layer_dense(units = 2L, input_shape = 187L, activation = "relu"),
+    # layer_dense(units = 2L, activation = "sigmoid"),
+    # layer_dense(units = 50L, activation = "sigmoid"),
+    layer_dense(units = 187L)
+  ))
 
-  # loss <- "mean_squared_error"
-  loss <- "binary_crossentropy"
+  compile(autoencoder, loss = "mean_squared_error", optimizer = "adam")
+  fit(autoencoder, dat$train$x, dat$train$x, epochs = 5, batch_size = 256)
 
-  model <- autoencoder_denoising(network1, loss, noise_type = "saltpepper", p = 0.1)
-  # model <- autoencoder_contractive(network1, loss)
-  model <- ruta::train(model, dat$train$x, epochs = 10, batch_size = 32)
-  reconstructions <- model %>% reconstruct(dat$test$x)
-  errors <- rowMeans((reconstructions - dat$test$x) ** 2)
-  # postscript("anomaly_detection_lorenz.eps", width = 8, height = 8, paper = "special", horizontal = F)
-  plot(
-    x = dat$test$t,
-    y = errors,
-    # Mark in black normal instances, in red undetected attacks or false alarms, in green true alarms
-    col = 2 + dat$test$y - !(errors > mean(errors, na.rm = T) + sd(errors, na.rm = T)),
-    # col = c("#909090", "#000000")[1 + (errors > mean(errors, na.rm = T) + sd(errors, na.rm = T))],
-    type = "h",
-    xlab = "Time (s)",
-    ylab = "Reconstruction error"
-  )
-  # lines(x = rep(dat$test$t[dat$test$y][1], 2), y = c(0, 5), lty = 2, col = "#aaaaaa")
-  # lines(x = rep(dat$test$t[dat$test$y][length(dat$test$t[dat$test$y])], 2), y = c(0, 5), lty = 2, col = "#aaaaaa")
-  # dev.off()
+  reconstructions <- predict(autoencoder, dat$test$x)
+  train_reconstructions <- predict(autoencoder, dat$train$x)
+
+  train_errors <- rowMeans((train_reconstructions - dat$train$x) ** 2, na.rm = T)
+  errors <- rowMeans((reconstructions - dat$test$x) ** 2, na.rm = T)
+
+  results <- data.frame(t=dat$test$t, y=dat$test$y, error=errors)
+  results <- results[!is.na(results$error),]
+
+  detect_over <- function(times) {
+    results$error > mean(train_errors, na.rm = T) + times * sd(train_errors, na.rm = T)
+  }
+  detection <- detect_over(6)
+  results$type = ifelse(results$y == 0, ifelse(detection, "FP", "TN"), ifelse(detection, "TP", "FN"))
+
+  library(ggplot2)
+  postscript("anomaly_histogram.eps", width = 6, height = 6, paper = "special", horizontal = F)
+  ggplot(results, aes(x=error, fill=type)) +
+    geom_histogram(bins = 120) +
+    scale_y_continuous("Count") + scale_x_log10("Reconstruction error") +
+    theme(legend.position = "bottom") +
+    scale_fill_viridis_d("Answer type", direction = -1)
+  dev.off()
+  postscript("anomaly_column.eps", width = 6, height = 6, paper = "special", horizontal = F)
+  ggplot(results, aes(color=type)) +
+    geom_segment(aes(x=t,xend=t,y=0,yend=error)) +
+    scale_y_log10("Reconstruction error") +
+    scale_x_discrete("Time of request") +
+    theme(legend.position = "bottom") +
+    scale_color_viridis_d("Answer type", direction = -1)
+  dev.off()
+
+  metrics_per_times <- compiler::cmpfun(function(start = 0, end = 100) {
+    t(as.data.frame(lapply(seq(start, end, 1), function(i) {
+      true <- dat$test$y == 1
+      pred <- detect_over(i)
+      tp = sum(true & pred, na.rm = T)
+      fp = sum(!true & pred, na.rm = T)
+      tn = sum(!true & !pred, na.rm = T)
+      fn = sum(true & !pred, na.rm = T)
+      return(c(
+        times = i,
+        tp = tp,
+        fp = fp,
+        tn = tn,
+        fn = fn,
+        precision = tp / (tp + fp),
+        recall = tp / (tp + fn)
+      ))
+    }), fix.empty.names = F))
+  })
+
+  metrics_per_threshold <- function(start = 0, end = 100) {
+    t(as.data.frame(lapply(seq(log(1e-6+start), log(1e-6+end), .1), function(i) {
+      i <- exp(i)
+      true <- dat$test$y == 1
+      pred <- errors > i
+      tp = sum(true & pred, na.rm = T)
+      fp = sum(!true & pred, na.rm = T)
+      tn = sum(!true & !pred, na.rm = T)
+      fn = sum(true & !pred, na.rm = T)
+      return(c(
+        n = i,
+        tp = tp,
+        fp = fp,
+        tn = tn,
+        fn = fn,
+        precision = tp / (tp + fp),
+        recall = tp / (tp + fn)
+      ))
+    }), fix.empty.names = F))
+  }
+
+  result <- as.data.frame(metrics_per_threshold(end = 158))
+  ggplot(result, aes(x=recall,y=precision)) + geom_line() + scale_y_continuous(limits=c(0, 1))
+
 }

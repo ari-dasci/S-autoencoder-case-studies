@@ -6,6 +6,12 @@ install_ruta <- function() {
   devtools::install_github("fdavidcl/ruta", ref = "dev")
 }
 
+allow_growth <- function() {
+  gpu_options <- tensorflow::tf$GPUOptions(allow_growth = TRUE)
+  config <- tensorflow::tf$ConfigProto(gpu_options = gpu_options)
+  keras::k_set_session(tensorflow::tf$Session(config = config))
+}
+
 .onLoad <- function(libname, pkgname) {
   message("
 Welcome to the supplementary experiments for the paper 'A Showcase
